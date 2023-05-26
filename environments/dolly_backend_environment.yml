@@ -18,3 +18,4 @@ dependencies:
     - gunicorn
     - azureml-inference-server-http
     - torch
+    - accelerate

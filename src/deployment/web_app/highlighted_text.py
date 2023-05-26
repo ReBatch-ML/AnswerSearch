@@ -1,4 +1,4 @@
-"""This module slightly adapts the text highlighting extension of streamlit to work with our texts with highlighting annotations."""
+""" Slightly modified streamlit extension that handles highlighting of paragraphs"""
 import html
 
 from htbuilder import H, HtmlElement, styles

@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.238.0/containers/python-3-miniconda
 {
-	"name": "Miniconda (Python 3)",
+	"name": "Ubuntu",
 	"build": { 
 		"context": "..",
 		"dockerfile": "Dockerfile",
@@ -44,12 +44,13 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pip install -e . && echo 'export GOOGLE_APPLICATION_CREDENTIALS=.cloud/.gcp/GCP_SERVICE_ACCOUNT.json' >> ~/.bashrc && conda init",
+	"postCreateCommand": "pip install -e . && conda init",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
-		"ghcr.io/devcontainers/features/azure-cli:1": {}
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/flexwie/devcontainer-features/op:1": {}
 	}
 }

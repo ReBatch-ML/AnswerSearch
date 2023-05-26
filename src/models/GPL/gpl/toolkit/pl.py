@@ -24,7 +24,7 @@ class PseudoLabeler(object):
         self.cross_encoder = CrossEncoder(cross_encoder)
         hard_negative_dataset = HardNegativeDataset(fpath_hard_negatives, gen_queries, corpus)
         self.hard_negative_dataloader = DataLoader(
-            hard_negative_dataset, shuffle=True, batch_size=batch_size, drop_last=True, num_workers=24
+            hard_negative_dataset, shuffle=True, batch_size=batch_size, drop_last=True
         )
         self.hard_negative_dataloader.collate_fn = hard_negative_collate_fn
         self.output_path = os.path.join(generated_path, 'gpl-training-data.tsv')
@@ -64,13 +64,7 @@ class PseudoLabeler(object):
 
             (query_id, pos_id, neg_id), (query, pos, neg) = batch
             query, pos, neg = [self.retokenize(texts) for texts in [query, pos, neg]]
-            cross_encoder_input = list(zip(query, pos)) + list(zip(query, neg))
-            scores = self.cross_encoder.predict(
-                cross_encoder_input,
-                batch_size=len(cross_encoder_input),
-                show_progress_bar=False,
-                #num_workers=8
-            )
+            scores = self.cross_encoder.predict(list(zip(query, pos)) + list(zip(query, neg)), show_progress_bar=False)
             labels = scores[:len(query)] - scores[len(query):]
             labels = labels.tolist()  # Using `tolist` will keep more precision digits!!!
 

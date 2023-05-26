@@ -1,16 +1,24 @@
+'''
+arguments for GPL training
+split between
+- arguments for data generation
+- arguments for train script
+- arguments shared by both
+'''
+
 shared_args:
-  gpl_steps: 12500
+  gpl_steps: 400000
   max_seq_length: 512
-  batch_size_gpl: 128
+  batch_size_gpl: 16
   qgen_prefix: 'qgen'
   corpus_name: 'corpus_all_length_250'
 
 datagen_args:
-  generator: 'doc2query/msmarco-dutch-mt5-base-v1'
-  cross_encoder: 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'
-  batch_size_generation: 10
-  queries_per_passage: 10
+  generator: 'BeIR/query-gen-msmarco-t5-base-v1'
+  cross_encoder: 'cross-encoder/ms-marco-MiniLM-L-6-v2'
+  batch_size_generation: 64
+  queries_per_passage: 1
   negatives_per_query: 50
 
 train_args:
-  base_ckpt: 'jegorkitskerkin/robbert-v2-dutch-base-mqa-finetuned' # bi_encoder
+  base_ckpt: 'multi-qa-mpnet-base-dot-v1' # multi-qa-MiniLM-L6-dot-v1 for bi_encoder

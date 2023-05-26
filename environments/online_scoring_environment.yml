@@ -6,13 +6,13 @@ channels:
 dependencies:
   - python=3.8
   - numpy
+  - faiss-cpu
   - pip
   - pip:
     - applicationinsights
     - azure-storage-blob
-    - azure-identity
     - joblib
-    - transformers
+    - sentence-transformers
     - datasets
     - flask
     - gunicorn

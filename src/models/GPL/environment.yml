@@ -100,5 +100,4 @@ dependencies:
     - typing-extensions==3.7.4.3
     - werkzeug==2.0.2
     - wrapt==1.12.1
-    - jsonlines
 prefix: /home/ukp/anaconda3/envs/gpl-reproduction

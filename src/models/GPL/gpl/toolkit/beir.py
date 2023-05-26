@@ -19,7 +19,7 @@ def save_queries(queries: Dict[str, str], output_dir):
     with open(save_path, 'w') as f:
         for qid, query in queries.items():
             line_dict = {"_id": qid, "text": query, "metadata": {}}
-            line = json.dumps(line_dict, ensure_ascii=False) + '\n'
+            line = json.dumps(line_dict) + '\n'
             f.write(line)
 
     logger.info(f'Saved (copied) queries into {save_path}')

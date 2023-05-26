@@ -1,5 +1,5 @@
 data/**
-
+huggingface_cache/**
 
 
 
@@ -112,3 +112,12 @@ venv.bak/
 .mypy_cache/
 
 .DS_Store
+
+.cloud/.azure/AZURE_SERVICE_PRINCIPAL.json
+src/deployment/web_app/api_key.txt
+.python_packages
+azureml-models/
+.cloud/.gcp/GCP_SERVICE_ACCOUNT.json
+environments/connection_string.txt
+src/deployment/web_app/.azure/config
+endpoint_api/api_keys.json

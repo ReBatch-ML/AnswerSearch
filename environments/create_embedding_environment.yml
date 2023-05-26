@@ -1,0 +1,20 @@
+name: embed_env
+channels:
+- defaults
+- pytorch
+- nvidia
+- conda-forge
+dependencies:
+  - python=3.8
+  - pillow
+  - pip
+  - pytorch==1.13.1
+  - torchvision==0.14.1
+  - pytorch-cuda==11.6
+  - pip:
+    - azureml-defaults
+    - azureml-pipeline-steps
+    - transformers
+    - datasets==2.8.0
+    - tqdm
+    - sentence_transformers

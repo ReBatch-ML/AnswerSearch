@@ -1,0 +1,8 @@
+streamlit
+azure-identity
+azure-storage-blob
+azure-keyvault
+htbuilder
+streamlit-authenticator>=0.2
+pyyaml
+numpy==1.23.5

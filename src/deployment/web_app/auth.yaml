@@ -1,0 +1,22 @@
+cookie:
+  expiry_days: 30
+  key: some_signature_key
+  name: some_cookie_name
+credentials:
+  usernames:
+    demo:
+      email: demo.be
+      name: demo
+      password: $2b$12$ugWl7okmkNArG02qvL7gY.Mm7S0Kwu3iIQtbPMtt8Qs7QMTdZt01q
+    jorgedecorte:
+      email: Jorge.decorte@rebatch.be
+      name: Jorge Decorte
+      password: $2b$12$h45CAt7U8HcY7XEcJWucCutg3yAhW2cbkfzaNyZJfLLQFwHOJH3v2
+    rubendebien:
+      email: ruben.debien@rebatch.be
+      name: Ruben Debien
+      password: $2b$12$d5LBc5sIEXQLL3nCDNguSulWV108swogbYVcuHXFXaT7xSBEcvDgm
+preauthorized:
+  emails:
+  - jorge.decorte@rebatch.be
+  - ruben.debien@rebatch.be

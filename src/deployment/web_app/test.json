@@ -1,0 +1,32 @@
+{
+    "_id": [
+      "ST 6922 2003 INIT_137",
+      "ST 9145 2021 ADD 2_13",
+      "ST 7165 2003 INIT_368"
+    ],
+    "paragraph_id": [
+      137,
+      13,
+      368
+    ],
+    "text": [
+      ["Early retirement. There are three cases. a)", ["Workers enrolled in the state pension scheme before 1967", "rgb(0,225,0)"], ": workers enrolled in the “Mutualidad Laboral de Trabajadores” before January 1967 can retire from the age of 60. If the retirement is voluntary, a reduction of 8% per year (before 65) is applied. if retirement is not voluntary and the workers can accredit over thirty years’ effective payment of social contributions, the reduction is between 6-7.5% (according to the years of paid contributions). b) (since 2001) workers not paying contributions before January 1, 1967 may take early retirement as of sixty-one provided they have been made redundant for causes beyond their control, accrediting at least 30 years’ effective payment of social contributions and that they have been registered as available for work in the six preceding months. The pension reduction per year remaining to 65 will"],
+      "been tightened over recent years.-15- For cohorts born before 1956 it was possible to retire after 37 career years, or from the age of 62 after 32 career years. For cohorts born before 1958, early retirement was possible at 61 after 43 career years, at 62 after 42 career years and at 63 after 41 career years. For cohorts born since 1958, the criteria are now as specified in the previous section. Furthermore, the pensionable age, currently 65, will increase to 66 in 2025 and 67 in 2030. The eligibility years in 2015 to 50 years in 2025, in steps of six months per year. In 2019, the maximum career length taken into account for the pensions of employees and the self-employed ('career unity') was largely abolished. Whereas in the past the benefit calculation was based strictly on the wages earned during the 45 years before retirement, this is now based on the earnings of 14,040 days (corresponding to 45 working years), which can be worked over more than 45 calendar years. In addition, social corrections have",
+      "scheme.Since 2000, the retirement age is 65 for both men and women. To be entitled to an old-age pension, beneficiaries need to have completed a qualifying period of 15 years of insurance, with at least 120 days per year of registered earnings. Since 1994, old-age and invalidity pensions are calculated on the basis of the average income of the best ten years over the last 15 (instead of the average monthly income of the best five years over the past ten years, which applied before)33. The rate of accrual of pension rights is 2% (previously 2.2%) for each insurance year.The second pillar is practically non-existent, and membership in such schemes has even declined slightly over recent years. It is regulated by the framework law on social security. Pension funds are administered by private institutions, essentially insurance companies and pension funds management companies.Third pillar provision can take different forms including the subscription of life insurance policies or voluntary membership in a pension fund. Individual pension provision is encouraged through tax incentives.A tax-financed non-contributory scheme provides means-tested benefits to persons aged 65 and over without adequate benefits from other sources. People with incomes below 30% of the national minimum wage"
+    ],
+    "cross_encoder_reordering": [
+      2,
+      0,
+      1
+    ],
+    "cross_encoder_prediction_score": [
+      0.7121307253837585,
+      0.6667460203170776,
+      0.2083490937948227
+    ],
+    "bi_encoder_time": 0.01502084732055664,
+    "faiss_time": 0.8507289886474609,
+    "cross_encoder_time": 0.0381016731262207,
+    "filter_time": 2.384185791015625e-7,
+    "sentence_time": 0
+  }

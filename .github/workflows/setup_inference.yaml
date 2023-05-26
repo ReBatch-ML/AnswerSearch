@@ -1,0 +1,84 @@
+name: Setup pretrained inference demo
+
+# runs on manual trigger
+on:
+  workflow_dispatch
+
+# env:
+#   LOCAL_CORPUS_PATH: "data/raw"
+#   DATASTORE_CORPUS_PATH: "raw_corpus"
+
+jobs:
+  prepare_corpus:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          # $CONDA is an environment variable pointing to the root of the miniconda directory
+          $CONDA/bin/conda env update --file environments/devcontainer_environment.yml --name base
+          echo $AZURE_SERVICE_PRINCIPAL
+          echo $AZURE_SERVICE_PRINCIPAL > .cloud/.azure/AZURE_SERVICE_PRINCIPAL.json
+
+          wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+
+          sudo apt-get update && sudo apt-get install -y dotnet-sdk-6.0
+
+          $CONDA/bin/pip install yq
+          $CONDA/bin/pip install -e .
+        env:
+          AZURE_SERVICE_PRINCIPAL: ${{ secrets.AZURE_SERVICE_PRINCIPAL }}
+      
+      # - name: Upload corpus
+      #   run: $CONDA/bin/python -c 'from packages.azureml_functions import upload_folder_to_datastore; upload_folder_to_datastore(path_on_datastore="raw_corpus", local_data_folder="data/raw")'
+
+      - name: Preprocess corpus
+        run: |
+          data_path=$(yq -r .raw_corpus_path "configs/deployment_config.yaml")
+          $CONDA/bin/python pipelines/preprocess_corpus.py --data_path $data_path --wait_for_completion
+  
+      - name: Create embeddings
+        run: $CONDA/bin/python pipelines/create_embeddings.py --dataset "processed"
+  
+  create_endpoint:
+    runs-on: ubuntu-20.04
+    needs: prepare_corpus
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          # $CONDA is an environment variable pointing to the root of the miniconda directory
+          $CONDA/bin/conda env update --file environments/devcontainer_environment.yml --name base
+          $CONDA/bin/pip install -e .
+
+          echo $AZURE_SERVICE_PRINCIPAL > .cloud/.azure/AZURE_SERVICE_PRINCIPAL.json
+        env:
+          AZURE_SERVICE_PRINCIPAL: ${{ secrets.AZURE_SERVICE_PRINCIPAL }}
+      - name: Install az cli and log in
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          appId=$(jq -r .appId .cloud/.azure/AZURE_SERVICE_PRINCIPAL.json)
+          password=$(jq -r .password .cloud/.azure/AZURE_SERVICE_PRINCIPAL.json)
+          tenant=$(jq -r .tenant .cloud/.azure/AZURE_SERVICE_PRINCIPAL.json)
+          az login --service-principal -u $appId -p $password --tenant $tenant
+
+      - name: Register combined models
+        run: $CONDA/bin/python -c 'from packages.azureml_functions import combine_models; combine_models()'
+      - name: Create endpoint
+        run: $CONDA/bin/python pipelines/deployment/deploy_backend.py 
+      - name: Create UI
+        run: . ./pipelines/deployment/deploy_UI.sh

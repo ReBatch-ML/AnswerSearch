@@ -1,0 +1,19 @@
+name: dev_container
+channels:
+- defaults
+- esri
+dependencies:
+  - python=3.8
+  - numpy
+  - pandas
+  - matplotlib
+  - ipykernel
+  - pip
+  - pip:
+    - azureml-defaults
+    - azureml-pipeline-steps
+    - joblib
+    - azure-ai-ml
+    - azure-identity
+    - azure-keyvault-secrets
+    - sentence-transformers

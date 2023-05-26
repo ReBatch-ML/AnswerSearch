@@ -1,0 +1,11 @@
+name: prep_env
+channels:
+- defaults
+dependencies:
+  - python=3.8
+  - numpy
+  - pillow
+  - pip
+  - pip:
+    - azureml-defaults
+    - azureml-pipeline-steps

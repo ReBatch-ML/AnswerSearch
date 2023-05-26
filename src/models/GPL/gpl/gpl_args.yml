@@ -1,0 +1,16 @@
+shared_args:
+  gpl_steps: 12500
+  max_seq_length: 512
+  batch_size_gpl: 128
+  qgen_prefix: 'qgen'
+  corpus_name: 'corpus_all_length_250'
+
+datagen_args:
+  generator: 'doc2query/msmarco-dutch-mt5-base-v1'
+  cross_encoder: 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'
+  batch_size_generation: 10
+  queries_per_passage: 10
+  negatives_per_query: 50
+
+train_args:
+  base_ckpt: 'jegorkitskerkin/robbert-v2-dutch-base-mqa-finetuned' # bi_encoder

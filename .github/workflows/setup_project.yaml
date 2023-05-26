@@ -1,0 +1,56 @@
+name: Setup the Semantic Search project
+
+on:
+  workflow_dispatch
+
+jobs:
+  create_resources:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+        - name: Install az cli and log in
+          run: |
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+            username=$(echo $AZURE_CREDENTIALS | jq -r '.["appId"]')
+            pwd=$(echo $AZURE_CREDENTIALS | jq -r '.["password"]')
+            tenant=$(echo $AZURE_CREDENTIALS | jq -r '.["tenant"]')
+            displayName=$(echo $AZURE_CREDENTIALS | jq -r '.["displayName"]')
+            echo $displayName
+            az login --service-principal -u $username -p $pwd --tenant $tenant
+
+            whereis yq
+            pip install yq 
+            whereis yq
+          env: 
+            AZURE_CREDENTIALS: ${{ secrets.AZURE_SERVICE_PRINCIPAL }} 
+        - name: Python modify yaml file
+          run: |
+            suffixes=(SemanticSearch semanticSearch Semanticsearch -semantic-search _semantic_search semsearch Semsearch SemSearch)
+
+            client=$github_repo_name
+            echo $client
+            for suffix in $suffixes
+            do
+              client=${client%$suffix}
+            done
+            echo $client
+            yq --arg e $client -yi '.client_name |= $e' configs/deployment_config.yaml
+          env:
+            github_repo_name: ${{ github.event.repository.name }}
+        - name: Build bicep template
+          shell: bash
+          run: |
+            . ./pipelines/bicep/create_resources.sh
+        
+        - name: Push changes
+          run: |
+            git config --global user.name 'github-actions' 
+            git config --global user.email 'github-actions@github.com' 
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+            git add -A
+            git commit -am "Add resource info to the repo"
+            git push --force
+

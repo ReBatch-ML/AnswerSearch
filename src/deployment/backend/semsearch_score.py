@@ -9,7 +9,6 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.cross_encoder import CrossEncoder
 from torch.nn import Sigmoid
 import re
-import faiss
 import numpy as np
 import pandas as pd
 import math
@@ -17,7 +16,8 @@ from difflib import SequenceMatcher
 import torch
 from difflib import SequenceMatcher
 from typing import Dict
-
+from pymilvus import CollectionSchema, FieldSchema, DataType, Collection, Milvus
+from pymilvus import connections
 from typing import List
 
 
@@ -62,7 +62,15 @@ class Context():
             str: The text that makes up the context, or the word DUPLICATE if the context is a duplicate
         """
         return self.text if not self.duplicate else "DUPLICATE"
-
+    
+def connect_to_db():
+    connections.connect(
+    alias="default",
+    user='username',
+    password='password',
+    host='20.50.24.59',
+    port='19530'
+    )
 
 def init():
     """
@@ -70,9 +78,9 @@ def init():
     """
     global bi_encoder
     global cross_encoder
+    global collection
     global corpus_embeddings
-    global staff_reg_officials_embeddings
-    global staff_reg_others_embeddings
+
     # global device
 
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -94,23 +102,10 @@ def init():
 
     connection_string = os.getenv("CONNECTION_STRING")
     print("CONNECTION_STRING:", connection_string)
-
-    location_public_reg = "/corpora/public_registry"
-    location_staff_reg_officials = "/corpora/stafreg_registry_officials"
-    location_staff_reg_others = "/corpora/stafreg_registry_others"
-
-    # dataset is small enough for a flat index
-    staff_reg_officials_embeddings = load_from_disk(location_staff_reg_officials)
-    staff_reg_officials_embeddings.add_faiss_index(column='embeddings', metric_type=faiss.METRIC_INNER_PRODUCT)
-    # staff_reg_officials_embeddings.load_faiss_index('embeddings', os.path.join(location_staff_reg_officials, "IVF76_Flat.faiss"))
-
-    # dataset is small enough for a flat index
-    staff_reg_others_embeddings = load_from_disk(location_staff_reg_others)
-    staff_reg_others_embeddings.add_faiss_index(column='embeddings', metric_type=faiss.METRIC_INNER_PRODUCT)
-    # staff_reg_others_embeddings.load_faiss_index('embeddings', os.path.join(location_staff_reg_others, "IVF47_Flat.faiss"))
-
-    corpus_embeddings = load_from_disk(location_public_reg)
-    corpus_embeddings.add_faiss_index(column='embeddings', metric_type=faiss.METRIC_INNER_PRODUCT)
+    #corpus_embeddings = load_from_disk(location_public_reg)
+    connect_to_db()
+    collection = Collection("milvus_vectors")  
+    collection.load()
 
 
 def __remove_text_overlap(texts: List[str]):
@@ -237,6 +232,64 @@ def __connect_overlapping_chunks(context_dict: Dict, semsearch_paragraph_index: 
         )
 
         return c
+
+def expand_context_milvus(og_samples):
+    samples = og_samples.copy()
+    context = []
+    k = len(samples["idx"])
+    expr="chunk_id in ["
+    for i in range(k):
+        if samples["chunk_id"][i] != -1:
+            expr+=str(samples["chunk_id"][i])    
+            expr+=","
+    if expr[-1] == ",":
+        expr = expr[:-1]
+    expr+="]"
+    try:
+        res = collection.query(
+        expr = expr,
+        output_fields = ["text","chunk_id","id"],
+        consistency_level="Strong"
+        )
+    except:
+        print("Milvus query failed for chunk_ids")
+        return None
+    
+    for i in range(k):
+        chunks = []
+        if samples["chunk_id"][i] != -1:
+            chunk_id = samples["chunk_id"][i]
+            if chunk_id in chunks:
+                dup_context = Context(paragraph_idx=samples["idx"][i], idxs_before=None, idxs_after=None, text="dup")
+                dup_context.duplicate = True
+                context.append(dup_context)
+                continue
+            
+            c_text = []
+            c_id = []
+            for r in res:
+                if r["chunk_id"] == samples["chunk_id"][i]:
+                    c_text.append(r["text"])
+                    c_id.append(r["id"])
+            context_dict = {
+                "texts": c_text,
+                "idxs": c_id,
+                "paragraph_idx": samples["idx"][i]
+            }
+            ctx = __connect_overlapping_chunks(context_dict, samples["idx"][i] - chunk_id)
+
+            context.append(ctx)
+            chunks.append(chunk_id)
+            
+
+            
+
+        else:
+            c = Context(paragraph_idx=samples["idx"][i], idxs_before=None, idxs_after=None, text=samples["text"][i])
+            context.append(c)
+
+    samples["context"] = [str(c) for c in context]
+    return samples
 
 
 def expand_context(ds, og_samples):
@@ -470,18 +523,89 @@ def cross_encoder_reranking(query, samples, prefix=""):
 
         best_indexes = cross_scores.argsort()[::-1]
         # sort the samples returned from faiss in the order of the cross-encoder + filter out unnecessary columns to return
-        res_dict = {prefix + str(k): sort_list(best_indexes, v) for k, v in samples.items() if k not in ["embeddings"]}
+        res_dict = {prefix + str(k): sort_list(best_indexes, v) for k, v in samples.items()}
         res_dict[prefix + 'cross_encoder_reordering'] = best_indexes.tolist()
         res_dict[prefix + 'cross_encoder_prediction_score'] = [float(i) for i in sort_list(best_indexes, cross_scores)]
     else:
         # samples has the same keys as res_dict from the if true case
-        samples.pop("embeddings", None)
         res_dict = samples
         res_dict[prefix + 'cross_encoder_reordering'] = []
         res_dict[prefix + 'cross_encoder_prediction_score'] = []
 
     return res_dict
 
+def search(target, collection, top_k=128):
+    
+    search_params = {"metric_type": "IP", "params": {"ef":512}, "offset": 0}
+    results = collection.search(
+        data=[target], 
+        anns_field="vector", 
+        param=search_params,
+        output_fields =  ["v_id","id","chunk_id","doc_id","doc_title","year","text"],
+        limit=top_k, 
+        consistecy_level="Strong"
+    )
+    hits = results[0]
+    
+    samples = {}
+    samples["v_id"] = []
+    samples["idx"] = []
+    samples["chunk_id"] = []
+    samples["doc_id"] = []
+    samples["title"] = []
+    samples["year"] = []
+    samples["text"] = []
+
+    for result in hits:
+        samples["v_id"].append(result.entity.get('v_id'))
+        samples["idx"].append(result.entity.get('id'))
+        samples["chunk_id"].append(result.entity.get('chunk_id'))
+        samples["doc_id"].append(result.entity.get('doc_id'))
+        samples["title"].append(result.entity.get('doc_title'))
+        samples["year"].append(result.entity.get('year'))
+        samples["text"].append(result.entity.get('text'))
+
+    return samples
+
+def filtered_search(target, collection, years, top_k=128):
+    
+    expr="year in ["
+    for i in range(len(years)):
+        expr+=str(years[i])
+        if i != len(years)-1:
+            expr+= ","
+    expr+="]"
+    search_params = {"metric_type": "IP", "params": {"ef":512}, "offset": 0}
+    results = collection.search(
+        data=[target], 
+        anns_field="vector", 
+        param=search_params,
+        output_fields =  ["v_id","id","chunk_id","doc_id","doc_title","year","text"],
+        limit=top_k, 
+        expr= expr,
+        consistecy_level="Strong"
+    )
+    hits = results[0]
+    
+    samples = {}
+    samples["v_id"] = []
+    samples["idx"] = []
+    samples["chunk_id"] = []
+    samples["doc_id"] = []
+    samples["title"] = []
+    samples["year"] = []
+    samples["text"] = []
+
+    for result in hits:
+        samples["v_id"].append(result.entity.get('v_id'))
+        samples["idx"].append(result.entity.get('id'))
+        samples["chunk_id"].append(result.entity.get('chunk_id'))
+        samples["doc_id"].append(result.entity.get('doc_id'))
+        samples["title"].append(result.entity.get('doc_title'))
+        samples["year"].append(result.entity.get('year'))
+        samples["text"].append(result.entity.get('text'))
+
+    return samples
 
 def run(raw_query):
     """
@@ -496,7 +620,7 @@ def run(raw_query):
     logging.info(f"Received the raw query{raw_query}")
 
     js = json.loads(raw_query)
-    query = js['query']
+    query = js['query'] #query is a list of strings
     corpus = js['corpus']
     highlighting = js['highlighting']
     top_k_standard = js['top_k']
@@ -506,29 +630,17 @@ def run(raw_query):
 
     # so that there is no error later
     filter_start = filter_end = 0
-    encode_end_faiss_start = time()
+    encode_end_bi_search_start = time()
 
     samples_extra = None
-    if corpus == "Public Registry":
-        years = js['years']
-        filtering = years != list(range(1993, 2023))
+    years = js['years']
+    filtering = years != list(range(1993, 2023))
         # add more samples in case of filtering
-        top_k_extended = top_k_standard if not filtering else top_k_standard * 6
-        _scores, samples = corpus_embeddings.get_nearest_examples('embeddings', query_embedding, k=top_k_extended)
-
-        filter_start = time()
-        if filtering:
-            samples, samples_extra = filter_retrieved_ex(retrieved_examples=samples, years=years, keep=top_k_standard)
-        filter_end = time()
-    elif corpus == "Staff Regulations (EU officials)":
-        _scores, samples = staff_reg_officials_embeddings.get_nearest_examples(
-            'embeddings', query_embedding, k=top_k_standard
-        )
-    elif corpus == "Staff Regulations (other servants)":
-        _scores, samples = staff_reg_others_embeddings.get_nearest_examples(
-            'embeddings', query_embedding, k=top_k_standard
-        )
-    faiss_end = time()
+    if not filtering:
+        samples = search(query_embedding[0], collection, top_k_standard)
+    else:   
+        samples = filtered_search(query_embedding[0], collection, years, top_k_standard)
+    bi_search_end = time()
 
     print("num samples", len(samples["text"]))
     cross_start = time()
@@ -544,7 +656,8 @@ def run(raw_query):
 
     context_start = time()
     if corpus == "Public Registry":
-        res_dict = expand_context(ds=corpus_embeddings, og_samples=res_dict)
+        #print("skip for now")
+        res_dict = expand_context_milvus(og_samples=res_dict)
     context_end = time()
 
     sentences_start = time()
@@ -553,8 +666,8 @@ def run(raw_query):
     sentences_end = time()
 
     # add time information
-    res_dict['bi_encoder_time'] = encode_end_faiss_start - encode_start
-    res_dict['faiss_time'] = faiss_end - encode_end_faiss_start - (filter_end-filter_start)
+    res_dict['bi_encoder_time'] = encode_end_bi_search_start - encode_start
+    res_dict['search_time'] = bi_search_end - encode_end_bi_search_start
     res_dict['cross_encoder_time'] = cross_end - cross_start
     res_dict['filter_time'] = filter_end - filter_start
     res_dict['sentence_time'] = sentences_end - sentences_start

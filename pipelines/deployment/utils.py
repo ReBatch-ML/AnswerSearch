@@ -9,7 +9,7 @@ from azure.mgmt.authorization.v2020_10_01_preview.models import (
 )
 
 
-def create_endpoint(ml_client, endpoint_name):
+def create_endpoint(ml_client, endpoint_name, description):
     """
     Function for creating an endpoint if it does not exist yet.
 
@@ -27,11 +27,11 @@ def create_endpoint(ml_client, endpoint_name):
 
     # Create the endpoint
     endpoint = ManagedOnlineEndpoint(
-        name=endpoint_name, description="Endpoint that will perform similaritysearch for an image."
+        name=endpoint_name, description=description
     )
     poller = ml_client.online_endpoints.begin_create_or_update(endpoint)
     poller.result()
-
+    """
     # 2 extra clients needed for creating a new role assignment
     credential = AzureCliCredential()
 
@@ -64,3 +64,4 @@ def create_endpoint(ml_client, endpoint_name):
         role_assignment_name=str(uuid.uuid4()),
         parameters=RoleAssignmentCreateParameters(role_definition_id=role_def.id, principal_id=system_principal_id),
     )
+    """

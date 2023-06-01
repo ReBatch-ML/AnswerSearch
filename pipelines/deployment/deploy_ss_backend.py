@@ -21,11 +21,11 @@ def create_deployment(ml_client, endpoint_name, env_vars=None):
     embeddings_model = ml_client.models.get(name="bi_cross_encoders", version='1')
 
     env = Environment(
-        # conda_file="environments/backend_environment.yml",
-        image="9a69c7869338423eaae7eb32fb63f9db.azurecr.io/semantic_search_fullpublic_fullstaffreg:latest",
+        conda_file="environments/ss_backend_environment.yml",
+        image="mcr.microsoft.com/azureml/curated/acpt-pytorch-1.13-py38-cuda11.7-gpu:1",
     )
 
-    onlineRequestSettings = OnlineRequestSettings(request_timeout_ms=20000)
+    onlineRequestSettings = OnlineRequestSettings(request_timeout_ms=90000)
 
     deployment = ManagedOnlineDeployment(
         name="semantic-search",
@@ -53,10 +53,10 @@ def main():
 
     ml_client = get_ml_client(stage=args.stage)
 
-    endpoint_name = f"semantic-search"
+    endpoint_name = f"semantic-search-endpoint"
     print(f"Endpoint name: {endpoint_name}")
 
-    create_endpoint(ml_client=ml_client, endpoint_name=endpoint_name)
+    create_endpoint(ml_client=ml_client, endpoint_name=endpoint_name, description="Endpoint that will perform similarity search")
 
     create_deployment(
         ml_client=ml_client,

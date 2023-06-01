@@ -16,6 +16,10 @@ credentials:
       email: jorge.decorte@consilium.europa.eu
       name: Jorge
       password: $2b$12$bZSxYDvTnDroq7eDYhiPTOwfHmhouhZHuEr5HAjiLSS5N2bCnTuuG
+    ju:
+      email: ju@rebatch.be
+      name: ju
+      password: $2b$12$IdCyIy4hSkz/aQyU230hWu7DwdwU3U0MWa0I854xwHaRhZdoUbDPG
     lucsix:
       email: Luc.SIX@consilium.europa.eu
       name: LucSIX

@@ -10,61 +10,14 @@ from azure.mgmt.authorization.v2020_10_01_preview.models import (
     RoleAssignment,
     RoleAssignmentCreateParameters,
 )
-
-
-def create_endpoint(ml_client, endpoint_name):
-    """Initialize an endpoint in azure
-
-    Args:
-        ml_client (MLClient): the mlclient that can be used to interact with the ml workspace.
-        endpoint_name (String): name for the endpoint
-    """
-    # Create the endpoint
-    endpoint = ManagedOnlineEndpoint(
-        name=endpoint_name, description="Endpoint that will perform flan search on the GSC data."
-    )
-    poller = ml_client.online_endpoints.begin_create_or_update(endpoint)
-    poller.result()
-
-    # 2 extra clients needed for creating a new role assignment
-    credential = AzureCliCredential()
-
-    role_definition_client = AuthorizationManagementClient(
-        credential=credential,
-        subscription_id=ml_client.subscription_id,
-        api_version="2018-01-01-preview",
-    )
-
-    role_assignment_client = AuthorizationManagementClient(
-        credential=credential,
-        subscription_id=ml_client.subscription_id,
-        api_version="2020-10-01-preview",
-    )
-
-    # retrieve the system assigned identity of the endpoint so we can assing the role to it
-    endpoint = ml_client.online_endpoints.get(endpoint_name)
-    system_principal_id = endpoint.identity.principal_id
-
-    # create the role for reading data from blob storage
-    role_name = "Storage Blob Data Reader"
-    scope = ml_client.datastores.get_default().id
-
-    role_defs = role_definition_client.role_definitions.list(scope=scope)
-    role_def = next((r for r in role_defs if r.role_name == role_name))
-
-    # assign the role
-    role_assignment_client.role_assignments.create(
-        scope=scope,
-        role_assignment_name=str(uuid.uuid4()),
-        parameters=RoleAssignmentCreateParameters(role_definition_id=role_def.id, principal_id=system_principal_id),
-    )
+from utils import create_endpoint
 
 
 def create_deployment(ml_client, endpoint_name):
     """Initialize a deployment for the backend"""
 
     env = Environment(
-        conda_file="environments/backend_environment.yml",
+        conda_file="environments/flan_backend_environment.yml",
         image="mcr.microsoft.com/azureml/curated/acpt-pytorch-1.13-py38-cuda11.7-gpu:1",
     )
 
@@ -74,7 +27,7 @@ def create_deployment(ml_client, endpoint_name):
     flan = ml_client.models.get(name="flan", version='1')
 
     deployment = ManagedOnlineDeployment(
-        name="open-book-qa",
+        name="flan",
         endpoint_name=endpoint_name,
         model=flan,
         environment=env,
@@ -98,7 +51,7 @@ def main():
 
     ml_client = get_ml_client(stage=args.stage)
 
-    endpoint_name = "GSC-open-book-qa"
+    endpoint_name = "Flan-endpoint"
     print(f"Endpoint name: {endpoint_name}")
     existing_endpoints = [e.name for e in ml_client.online_endpoints.list()]
     print(f"Existing endpoints: {existing_endpoints}")
@@ -107,7 +60,7 @@ def main():
     compare = [endpoint_name.lower() != e.lower() for e in existing_endpoints]
     # no endpoint has the same name, so we can create a new one
     if all(compare):
-        create_endpoint(ml_client=ml_client, endpoint_name=endpoint_name)
+        create_endpoint(ml_client=ml_client, endpoint_name=endpoint_name, description="Endpoint that will perform flan search on the semsearch results.")
 
     create_deployment(
         ml_client=ml_client,

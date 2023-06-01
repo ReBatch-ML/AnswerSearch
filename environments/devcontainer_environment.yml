@@ -26,3 +26,4 @@ dependencies:
     - google-cloud-storage
     - kfp
     - google-cloud-pipeline-components
+    - pymilvus

@@ -52,12 +52,12 @@ SEMSEARCH_URL, SEMSEARCH_KEY, FLAN_URL, FLAN_KEY, DOLLY_URL, DOLLY_KEY, path = g
 ANSWERS_AMOUNT = 5
 QUERY_AMOUNT = 64
 online_deployment = "semantic-search"
-qa_deployment = "open-book-qa"
+qa_deployment = "flan"
 dolly_deployment = "dolly"
 
 logo = Image.open(path + "cronos_logo.webp")
 
-st.set_page_config(page_title="AnswerGSC", page_icon=logo, layout="wide")
+st.set_page_config(page_title="Rebatch Knowledge Assistant", page_icon=logo, layout="wide")
 
 
 def _max_width_():
@@ -128,14 +128,15 @@ def demo():
         )
         if corpus == "Public Registry":
             years = st.select_slider(label="Years to include:", options=range(1993, 2023), value=(1993, 2022))
-        highlighting = st.checkbox(
-            label="Highlight relevant sentences?",
-            value=False,
-            help="This is a costly operation and will slow down result retrieval."
-        )
+        
 
         default_top_k = 128
         if IS_ADMIN_USER:
+            highlighting = st.checkbox(
+                label="Highlight relevant sentences?",
+                value=True,
+                help="This is a costly operation and will slow down result retrieval."
+            )
             top_k = st.number_input("# results of bi-encoder", min_value=1, max_value=1000, value=default_top_k)
             prompt_option = st.radio(
                 label="Select prompt customization options",
@@ -147,13 +148,14 @@ def demo():
             temperature = st.slider(label="Temperature", min_value=0.001, max_value=1.0, value=0.01, step=0.01)
 
         else:
+            highlighting = True
             top_k = default_top_k
             prompt = "Generate a comprehensive and informative answer based on the context that answers the question. Think step-by-step:"
             prompt_option = "2-step-partialprompt"
             temperature = 0.01
 
     with center:
-        st.title("AnswerGSC")
+        st.title("ReBatch AnswerSearch")
         # st.header("")
         if IS_ADMIN_USER:
             with st.form(key="text_form"):
@@ -199,6 +201,7 @@ def demo():
         Returns:
             List(Tuple): List of paragraphs (and metadata) belonging to each document
         """
+        print(json_data.keys())
         doc_ids = np.array(json_data[key_prefix + 'doc_id'])
         paragraphs = np.array(json_data[key_prefix + 'text'])
         scores = np.array(json_data[key_prefix + 'cross_encoder_prediction_score'])
@@ -377,18 +380,12 @@ def demo():
         """
 
         def allowSelfSignedHttps(allowed):
-            """
-            Helper function that allows self signed HTTPS if allowed
-
-            Args:
-                allowed (Bool): _description_
-            """
             # bypass the server certificate verification on client side
-            if allowed and not os.environ.get('PYTHONHTTPSVERIFY',
-                                              '') and getattr(ssl, '_create_unverified_context', None):
+            if allowed and not os.environ.get('PYTHONHTTPSVERIFY', '') and getattr(ssl, '_create_unverified_context', None):
                 ssl._create_default_https_context = ssl._create_unverified_context
 
-        allowSelfSignedHttps(True)  # this line is needed if you use self-signed certificate in your scoring service.
+        allowSelfSignedHttps(True) # this line is needed if you use self-signed certificate in your scoring service.
+
 
         body = str.encode(json.dumps(data))
 
@@ -502,6 +499,7 @@ def demo():
         if query[-1] != '?':
             query = query + '?'  # add question mark if not present)]
 
+        
         with complete_answer_container:
             st.markdown("## Final Answer")
         with answer_container:
@@ -513,6 +511,8 @@ def demo():
         #write SGC results:
         with ss_container.container():
             st.markdown("## Semantic Search Results")
+            if result==None:
+                st.error("No results")
             write_results(processed_results)
             prefix = "extra_"
             # check if there are extra documents in the dictionary
@@ -535,10 +535,11 @@ def demo():
 
         if IS_ADMIN_USER:
             left.write(f"bi_encoder_time: {result['bi_encoder_time']}")
-            left.write(f"faiss_time: {result['faiss_time']}")
+            left.write(f"search_time: {result['search_time']}")
             left.write(f"cross_encoder_time: {result['cross_encoder_time']}")
             left.write(f"Sentence_highlighting_time: {result['sentence_time']}")
             left.write(f"filter_time: {result['filter_time']}")
+            left.write(f"context_time: {result['context_time']}")
             left.write(f"Total time: {end-start}s")
 
 

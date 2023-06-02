@@ -2,14 +2,14 @@
 
 
 ## Deploy backend
-### online managed deployments:
+### Online managed deployments:
 Run script in source directory:
 ```
 python pipelines/deployment/deploy_all_backend.py start
 ```
 
 This will start the Milvus kubernetes service, check if the milvus server is online and then deploy the semsearch, flan and dolly backend modules.
-### frontend UI:
+### Frontend UI:
 To launch the webapp, run script in source directory:
 ```
 ./pipelines/deployment/deploy_webapp.sh
@@ -22,7 +22,7 @@ Once this is done run script in source directory:
 
 ## Turn off deployments to safe money
 
-### online managed deployments:
+### Online managed deployments:
 Run scriptin source directory:
 ```
 python pipelines/deployment/deploy_all_backend.py stop
@@ -30,7 +30,7 @@ python pipelines/deployment/deploy_all_backend.py stop
 
 This will stop the milvus kubernetes service and delete the semsearch, flan and dolly backend endpoints.
 
-### frontend UI:
+### Frontend UI:
 1. Go to the AnswerSearch resource group where the website resources reside:
     1. App Service
     2. App Service plan
@@ -68,9 +68,9 @@ The file packages/milvus_functions.py contains fucntions to:
 2. Create collection
 3. Change index
 4. Insert data from corpus
-5. perform search on vectors
-6. calculate recall using test file for GSC corpus
-7. drop collection
+5. Perform search on vectors
+6. Calculate recall using test file for GSC corpus
+7. Drop collection
 
 ## Directory Structure
 

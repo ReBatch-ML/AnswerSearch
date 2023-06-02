@@ -51,11 +51,11 @@ To view status of the milvus services; all 3 need to be running (1/1) in order f
 ```
 Kubectl get pods
 ```
-In order to install Milvus again type:
+In order to install Milvus run:
 ```
 helm install my-release milvus/milvus --set service.type=LoadBalancer --set cluster.enabled=false --set etcd.replicaCount=1 --set minio.mode=standalone --set pulsar.enabled=false
 ```
-To uninstall Milvus type:
+To uninstall Milvus run:
 ```
 helm uninstall my-release
 ```

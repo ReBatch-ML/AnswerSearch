@@ -1,0 +1,21 @@
+name: dev_container
+channels:
+- defaults
+- esri
+- pytorch
+dependencies:
+  - python=3.8
+  - numpy
+  - pip
+  - pip:
+    - applicationinsights
+    - azure-storage-blob
+    - azure-identity
+    - joblib
+    - transformers
+    - datasets
+    - flask
+    - gunicorn
+    - azureml-inference-server-http
+    - torch
+    - accelerate

@@ -1,0 +1,64 @@
+# Python to Linux Web App on Azure
+# Build your Python project and deploy it to Azure as a Linux Web App.
+# Change python version to one thats appropriate for your application.
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+schedules:
+  - cron: "0 17 * * 1-5"
+    displayName: Evening Schedule
+    branches:
+      include:
+        - main
+    always: true
+
+pr: none
+trigger: none
+    
+
+variables:
+  # Azure Resource Manager connection created during pipeline creation
+  azureServiceConnectionId: CICD-sp
+
+  # Web app name
+  webAppName: 'semantic-search-streamlit'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+  # Environment name
+  envName: semantic-search-streamlit
+
+  # Project root folder. Point to the folder containing manage.py file.
+  projectRoot: $(System.DefaultWorkingDirectory)
+
+  # Python version: 3.8
+  pythonVersion: '3.8'
+
+stages:
+  - stage: Delete_online_endpoint
+    displayName: Deleting
+    jobs:
+      - job: endpoint
+        pool: 
+          vmImage: $(vmImageName)
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+            displayName: 'Use Python $(pythonVersion)'
+          - script: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash 
+              az extension add -n ml -y
+            workingDirectory: $(projectRoot)
+            displayName: "Install az ml extension"
+          - task: AzureCLI@2
+            displayName: Delete deployment on online endpoint
+            inputs:
+              azureSubscription: $(azureServiceConnectionId)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Lower the traffic to 0%..."
+                az ml online-endpoint update --name online-endpoint-cli --traffic "Standard-F8s-v2=0" --resource-group Semantic_Search --workspace-name SemanticSearch_TRAIN
+                echo "Delete the deployment..."
+                az ml online-deployment delete --name Standard-F8s-v2 -e online-endpoint-cli -g Semantic_Search -w SemanticSearch_TRAIN --yes

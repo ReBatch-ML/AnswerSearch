@@ -2,109 +2,14 @@
 Script that starts GPL training based on synthetic training data generated in GPL/gpl/training_data.py
 Most important arguments found in GPL/gpl/gpl_args.yml
 '''
-import argparse
-import os
-from pathlib import Path
-
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-#### IMPORTS ######
-from beir.datasets.data_loader import GenericDataLoader
-from toolkit import (
-    MarginDistillationLoss, GenerativePseudoLabelingDataset, resize, load_sbert, set_logger_format,
-    rescale_gpl_training_data
-)
-from sentence_transformers import SentenceTransformer, evaluation
-
-from torch.utils.data import DataLoader
-import numpy as np
-from beir.retrieval import models
-from beir.retrieval.search.dense import DenseRetrievalExactSearch as DRES
-from beir.retrieval.evaluation import EvaluateRetrieval
-
-import os
-import logging
 from typing import List, Union
-import math
-from glob import glob
-import shutil
-from datetime import datetime
-import torch
-
-# from azureml.data.datapath import DataPath
-# from azureml.data import FileDataset
-from azureml.core import Workspace, Dataset, Run, Model
-from azureml.core.authentication import ServicePrincipalAuthentication
-
-
-# compute recall, precision, mAP, and ndcg
-def evaluate(
-    data_path: str,
-    output_dir: str,
-    model_name_or_path: str,
-    max_seq_length: int = 512,
-    score_function: str = 'dot',
-    pooling: str = None,
-    sep: str = ' ',
-    k_values: List[int] = [10, 30, 50, 100],
-    split: str = 'test'
-):
-    """
-    Evaluate a model on a given dataset
-
-    :param data_path: path to the dataset
-    :param output_dir: path to the output directory
-    :param model_name_or_path: path to the model
-    :param max_seq_length: maximum sequence length
-    :param score_function: scoring function to use
-    :param pooling: pooling strategy to use
-    :param sep: separator to use
-    :param k_values: list of k values to use
-    :param split: split to use
-
-    :return: None
-    """
-    model: SentenceTransformer = load_sbert(model_name_or_path, pooling, max_seq_length)
-
-    data_paths = []
-    data_paths.append(data_path)
-
-    ndcgs = []
-    _maps = []
-    recalls = []
-    precisions = []
-    for data_path in data_paths:
-        corpus, queries, qrels = GenericDataLoader(data_path).load(split=split)
-
-        sbert = models.SentenceBERT(sep=sep)
-        sbert.q_model = model
-        sbert.doc_model = model
-
-        model_dres = DRES(sbert, batch_size=16, corpus_chunk_size=18000)
-        assert score_function in ['dot', 'cos_sim']
-        retriever = EvaluateRetrieval(
-            model_dres, score_function=score_function, k_values=k_values
-        )  # or "dot" for dot-product
-        results = retriever.retrieve(corpus, queries)
-
-        #### Evaluate your retrieval using NDCG@k, MAP@K ...
-        ndcg, _map, recall, precision = EvaluateRetrieval.evaluate(qrels, results, k_values)
-        ndcgs.append(ndcg)
-        _maps.append(_map)
-        recalls.append(recall)
-        precisions.append(precision)
-
-    ndcg = {k: np.mean([score[k] for score in ndcgs]) for k in ndcg}
-    _map = {k: np.mean([score[k] for score in _maps]) for k in _map}
-    recall = {k: np.mean([score[k] for score in recalls]) for k in recall}
-    precision = {k: np.mean([score[k] for score in precisions]) for k in precision}
-
-    metrics = dict(**ndcg, **_map, **recall, **precision)
-    return metrics
+from kfp.v2.dsl import Dataset, Input
 
 
 def train(
     path_to_generated_data: str,
     output_dir: str,
+    corpus_path_on_datastore: Input[Dataset],
     mnrl_output_dir: str = None,
     mnrl_evaluation_output: str = None,
     do_evaluation: str = False,
@@ -129,47 +34,197 @@ def train(
     use_train_qrels: bool = False,
     gpl_score_function: str = 'dot',
     rescale_range: List[float] = None,
-    ws=None,
-    eval_save_steps=15000,
-    dataset=None,
 ):
-    """
-    Training function the GPL training method described in the paper "Generative Pseudo-Labeling for Zero-Shot Cross-Encoder Training" (https://arxiv.org/abs/2104.08663).
+    """_summary_
 
-    :param path_to_generated_data: Path to the generated data.
-    :param output_dir: Output directory for the trained model.
-    :param mnrl_output_dir: Output directory for the MNRL training data. If None, MNRL training data is not generated.
-    :param mnrl_evaluation_output: Output directory for the MNRL evaluation data. If None, MNRL evaluation data is not generated.
-    :param do_evaluation: If True, evaluation is performed after training.
-    :param evaluation_data: Path to the evaluation data. If None, the evaluation data is generated from the training data.
-    :param evaluation_output: Output directory for the evaluation results.
-    :param qgen_prefix: Prefix for the generated queries.
-    :param base_ckpt: Base checkpoint for the GPL model.
-    :param generator: Generator model for the query generation.
-    :param cross_encoder: Cross-encoder model for the GPL model.
-    :param batch_size_gpl: Batch size for the GPL model.
-    :param batch_size_generation: Batch size for the query generation.
-    :param pooling: Pooling strategy for the GPL model.
-    :param max_seq_length: Maximum sequence length for the GPL model.
-    :param new_size: New size of the training data. If None, the size of the training data is not changed.
-    :param queries_per_passage: Number of queries per passage for the MNRL training data.
-    :param gpl_steps: Number of training steps for the GPL model.
-    :param use_amp: If True, automatic mixed precision is used.
-    :param retrievers: List of retrievers for the evaluation.
-    :param retriever_score_functions: List of score functions for the evaluation.
-    :param negatives_per_query: Number of negative passages per query for the evaluation.
-    :param eval_split: Split for the evaluation.
-    :param use_train_qrels: If True, the training qrels are used for the evaluation.
-    :param gpl_score_function: Score function for the GPL model.
-    :param rescale_range: Rescale range for the GPL model.
-    :param ws: Azure workspace
-    :param eval_save_steps: Number of steps after which the model is saved during evaluation
-    :param dataset: Dataset folder
+    Args:
+        path_to_generated_data (str): _description_
+        output_dir (str): _description_
+        corpus_path_on_datastore (Input[Dataset]): _description_
+        mnrl_output_dir (str, optional): _description_. Defaults to None.
+        mnrl_evaluation_output (str, optional): _description_. Defaults to None.
+        do_evaluation (str, optional): _description_. Defaults to False.
+        evaluation_data (str, optional): _description_. Defaults to None.
+        evaluation_output (str, optional): _description_. Defaults to 'output'.
+        qgen_prefix (str, optional): _description_. Defaults to 'qgen'.
+        base_ckpt (str, optional): _description_. Defaults to 'distilbert-base-uncased'.
+        generator (str, optional): _description_. Defaults to 'BeIR/query-gen-msmarco-t5-base-v1'.
+        cross_encoder (str, optional): _description_. Defaults to 'cross-encoder/ms-marco-MiniLM-L-6-v2'.
+        batch_size_gpl (int, optional): _description_. Defaults to 32.
+        batch_size_generation (int, optional): _description_. Defaults to 32.
+        pooling (str, optional): _description_. Defaults to None.
+        max_seq_length (int, optional): _description_. Defaults to 350.
+        new_size (int, optional): _description_. Defaults to None.
+        queries_per_passage (int, optional): _description_. Defaults to 3.
+        gpl_steps (int, optional): _description_. Defaults to 140000.
+        use_amp (bool, optional): _description_. Defaults to False.
+        retrievers (List[str], optional): _description_. Defaults to ['msmarco-distilbert-base-v3', 'msmarco-MiniLM-L-6-v3'].
+        retriever_score_functions (List[str], optional): _description_. Defaults to ['cos_sim', 'cos_sim'].
+        negatives_per_query (int, optional): _description_. Defaults to 50.
+        eval_split (str, optional): _description_. Defaults to 'test'.
+        use_train_qrels (bool, optional): _description_. Defaults to False.
+        gpl_score_function (str, optional): _description_. Defaults to 'dot'.
+        rescale_range (List[float], optional): _description_. Defaults to None.
 
-    :return: None
+    Raises:
+        e: _description_
+        e: _description_
+
+    Returns:
+        _type_: _description_
     """
+
+    print('getting imports')
+    #### IMPORTS ######
+    import shutil
+    from beir.datasets.data_loader import GenericDataLoader
+    from gpl.toolkit import (
+        qgen, NegativeMiner, MarginDistillationLoss, GenerativePseudoLabelingDataset, PseudoLabeler, resize, load_sbert,
+        set_logger_format, mnrl, save_queries, save_qrels, extract_queries_split, rescale_gpl_training_data
+    )
+    from sentence_transformers import SentenceTransformer, evaluation
+
+    from torch.utils.data import DataLoader
+    import numpy as np
+    from beir.retrieval import models
+    from beir.retrieval.search.dense import DenseRetrievalExactSearch as DRES
+    from beir.retrieval.evaluation import EvaluateRetrieval
+
+    import os
+    import logging
+    import argparse
+    from typing import List, Union
+    import math
+    from glob import glob
+    import shutil
+    import pandas as pd
+    from datetime import datetime
+    import json
+    import torch
+
+    from google.cloud import secretmanager
+    from google.cloud import storage
+
+    # from azureml.core import Run, Dataset, Datastore
+    # from azureml.data.datapath import DataPath
+    # from azureml.data import FileDataset
+    from azureml.core import Workspace, Dataset
+    from azureml.core import Run, Model
+    from azureml.core.authentication import ServicePrincipalAuthentication
+
+    ############################ FUNCTIONS ####################################
+
+    # compute recall, precision, mAP, and ndcg
+    def evaluate(
+        data_path: str,
+        output_dir: str,
+        model_name_or_path: str,
+        max_seq_length: int = 512,
+        score_function: str = 'dot',
+        pooling: str = None,
+        sep: str = ' ',
+        k_values: List[int] = [10, 30, 50, 100],
+        split: str = 'test'
+    ):
+        """_summary_
+
+        Args:
+            data_path (str): _description_
+            output_dir (str): _description_
+            model_name_or_path (str): _description_
+            max_seq_length (int, optional): _description_. Defaults to 512.
+            score_function (str, optional): _description_. Defaults to 'dot'.
+            pooling (str, optional): _description_. Defaults to None.
+            sep (str, optional): _description_. Defaults to ' '.
+            k_values (List[int], optional): _description_. Defaults to [10, 30, 50, 100].
+            split (str, optional): _description_. Defaults to 'test'.
+
+        Returns:
+            _type_: _description_
+        """
+        model: SentenceTransformer = load_sbert(model_name_or_path, pooling, max_seq_length)
+
+        data_paths = []
+        data_paths.append(data_path)
+
+        ndcgs = []
+        _maps = []
+        recalls = []
+        precisions = []
+        for data_path in data_paths:
+            corpus, queries, qrels = GenericDataLoader(data_path).load(split=split)
+
+            sbert = models.SentenceBERT(sep=sep)
+            sbert.q_model = model
+            sbert.doc_model = model
+
+            model_dres = DRES(sbert, batch_size=16, corpus_chunk_size=18000)
+            assert score_function in ['dot', 'cos_sim']
+            retriever = EvaluateRetrieval(
+                model_dres, score_function=score_function, k_values=k_values
+            )  # or "dot" for dot-product
+            results = retriever.retrieve(corpus, queries)
+
+            #### Evaluate your retrieval using NDCG@k, MAP@K ...
+            ndcg, _map, recall, precision = EvaluateRetrieval.evaluate(qrels, results, k_values)
+            ndcgs.append(ndcg)
+            _maps.append(_map)
+            recalls.append(recall)
+            precisions.append(precision)
+
+        ndcg = {k: np.mean([score[k] for score in ndcgs]) for k in ndcg}
+        _map = {k: np.mean([score[k] for score in _maps]) for k in _map}
+        recall = {k: np.mean([score[k] for score in recalls]) for k in recall}
+        precision = {k: np.mean([score[k] for score in precisions]) for k in precision}
+
+        metrics = dict(**ndcg, **_map, **recall, **precision)
+        return metrics
+
+    # Model Callback to save on Azure
+    def save_callback(score, epoch, steps):
+        """_summary_
+
+        Args:
+            score (_type_): _description_
+            epoch (_type_): _description_
+            steps (_type_): _description_
+
+        Raises:
+            e: _description_
+        """
+        print(checkpoint_dir)
+        subdirs = glob(checkpoint_dir + '/*')
+        print('checkpoints:', subdirs)
+        if len(subdirs) > 0:
+            ckpts = [int(ckpt) for ckpt in list(map(lambda x: x.rsplit('/', 1)[-1], subdirs)) if ckpt.isdigit()]
+            latest_ckpt = str(max(ckpts))
+
+            model_out_dir = checkpoint_dir + '/' + latest_ckpt
+            properties = {'total_gpl_steps': gpl_steps, 'path_to_data': path_to_generated_data}
+
+            print('Start Evaluation')
+            try:
+                metrics = evaluate(
+                    data_path=evaluation_data,
+                    output_dir=output_dir,
+                    model_name_or_path=model_out_dir,
+                )
+            except Exception as e:
+                print(e)
+                print(type(e))
+                raise e
+            print('metrics:', metrics)
+
+            Model.register(
+                workspace=ws, model_path=model_out_dir, model_name=model_name, properties=dict(**metrics, **properties)
+            )
+
+            # delete the checkpoint folders up till now
+            for folder in subdirs:
+                shutil.rmtree(folder)
 
     ####################################################################################################################################################################################
+
     DATE = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     model_name = base_ckpt + '_TRAINED_' + DATE
     model_name = model_name.replace('/', '_')
@@ -182,8 +237,23 @@ def train(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
 
+    #### Load AzureML workspace
+    # load azure service principal
+    secret_client = secretmanager.SecretManagerServiceClient()
+    response = secret_client.access_secret_version(
+        request={"name": 'projects/rebatch-sandbox-329013/secrets/azure_service_principal_ss/versions/1'}
+    )
+    sp = json.loads(response.payload.data.decode("UTF-8"))
+    sp_auth = ServicePrincipalAuthentication(
+        tenant_id=sp["tenant"], service_principal_id=sp["appId"], service_principal_password=sp["password"]
+    )
+    print('service principal loaded')
     # get workspace
-    print(ws, 'obtained from Azure')
+    subscription_id = "9da3a5d6-6bf3-4b2c-8219-88caf39f718d"
+    resource_group = "Semantic_Search"
+    workspace_name = "SemanticSearch_TRAIN"
+    ws = Workspace(subscription_id, resource_group, workspace_name, auth=sp_auth)
+    print(ws, ' obtained from Azure')
 
     #### Assertions ####
     assert pooling in [None, 'mean', 'cls', 'max']
@@ -254,57 +324,6 @@ def train(
         if gpl_score_function == 'cos_sim':
             logger.warning(f'Not do rescaling while gpl_score_function = {gpl_score_function}')
 
-    def save_callback(score, epoch, steps):
-        """
-        Model Callback to save on Azure
-
-        Args:
-            score (_type_): Aren't really used here, might just be the default parameters that azure expects in a callback.
-            epoch (_type_): Aren't really used here, might just be the default parameters that azure expects in a callback.
-            steps (_type_): Aren't really used here, might just be the default parameters that azure expects in a callback.
-
-        Raises:
-            e: _description_
-        """
-        print(checkpoint_dir)
-        subdirs = glob(checkpoint_dir + '/*')
-        print('checkpoints:', subdirs)
-        if len(subdirs) > 0:
-            ckpts = [int(ckpt) for ckpt in list(map(lambda x: x.rsplit('/', 1)[-1], subdirs)) if ckpt.isdigit()]
-            latest_ckpt = str(max(ckpts))
-
-            model_out_dir = checkpoint_dir + '/' + latest_ckpt
-            properties = {'total_gpl_steps': gpl_steps, 'path_to_data': path_to_generated_data}
-
-            print('Start Evaluation')
-            try:
-                metrics = evaluate(
-                    data_path=evaluation_data,
-                    output_dir=output_dir,
-                    model_name_or_path=model_out_dir,
-                )
-            except Exception as e:
-                print(e)
-                print(type(e))
-                raise e
-            print('metrics:', metrics)
-
-            run.upload_folder(name=model_out_dir, path=model_out_dir)
-            run.register_model(
-                model_name=model_name,
-                model_path=model_out_dir,
-                tags=properties,
-                properties=metrics,
-                description="GPL Model"
-            )
-
-            #Model.register(workspace=ws, model_path=model_out_dir, model_name=model_name,
-            #               properties=dict(**metrics, **properties))
-
-            # delete the checkpoint folders up till now
-            for folder in subdirs:
-                shutil.rmtree(folder)
-
     ### Train the model with MarginMSE loss ###
     #### This will be skipped if the checkpoint at the indicated training steps can be found ####
     print('Start Training')
@@ -325,8 +344,9 @@ def train(
             anchors=['mock_query'], positives=['mock_positive'], negatives=['mock_negative']
         )  # without evaluator callback won't work
 
-        checkpoint_dir = str(Path(output_dir, 'checkpoints'))
+        checkpoint_dir = output_dir + 'checkpoints'
         os.makedirs(checkpoint_dir, exist_ok=True)
+        eval_save_steps = 15000
         # assert gpl_steps > 1000
 
         model.fit(
@@ -350,20 +370,35 @@ def train(
     else:
         print('Trained GPL model found. Now skip training')
 
+    # ### Evaluate the model if required ###
+    # if do_evaluation:
+    #     print('Doing evaluation for GPL')
+    #     evaluate(
+    #         evaluation_data,
+    #         evaluation_output,
+    #         ckpt_dir,
+    #         max_seq_length,
+    #         score_function=gpl_score_function,
+    #         pooling=pooling,
+    #         split=eval_split
+    #     )
 
+
+# DEPRECATED
+# Used to work with run_training pipeline on Azure
+# now train definition is used directly in gcp pipeline
 if __name__ == '__main__':
     run = Run.get_context()
+    ws = run.experiment.workspace
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', required=True, help='Path to train and test sets')
-
     parser.add_argument(
         '--path_to_generated_data',
-        required=False,
+        required=True,
         help=
         'Path for/to the generated data. GPL will first check this path for a `corpus.jsonl` file for the (sole) data input of the whole pipeline. If an empty folder is indicated, query generation and hard-negative mining will be run automatically; one can also use a BeIR-QGen format data folder to start and skip the query generation.'
     )
-    parser.add_argument('--output_dir', required=False, help='Output path for the GPL model.', default="output")
+    parser.add_argument('--output_dir', required=True, help='Output path for the GPL model.')
     parser.add_argument(
         '--do_evaluation', action='store_true', default=False, help='Wether to do the evaluation (after training)'
     )
@@ -382,11 +417,11 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--base_ckpt',
-        default='jegorkitskerkin/robbert-v2-dutch-base-mqa-finetuned',
+        default='distilbert-base-uncased',
         help='Initialization checkpoint in HF or SBERT format. Meaning-pooling will be used.'
     )
-    parser.add_argument('--generator', default='doc2query/msmarco-dutch-mt5-base-v1')
-    parser.add_argument('--cross_encoder', default='cross-encoder/mmarco-mMiniLMv2-L12-H384-v1')
+    parser.add_argument('--generator', default='BeIR/query-gen-msmarco-t5-base-v1')
+    parser.add_argument('--cross_encoder', default='cross-encoder/ms-marco-MiniLM-L-6-v2')
     parser.add_argument('--batch_size_gpl', type=int, default=32)
     parser.add_argument(
         '--batch_size_generation', type=int, default=10, help='Batch size in the query generation step.'
@@ -448,31 +483,14 @@ if __name__ == '__main__':
         '--eval_split', type=str, default='test', choices=['train', 'test', 'dev'], help='Which split to evaluate on'
     )
     parser.add_argument('--use_train_qrels', action='store_true', default=False)
-    parser.add_argument("--eval_save_steps", type=int, default=1500)
     args = parser.parse_args()
 
     print(os.listdir())
-
-    print("Dataset path", args.dataset)
-    args.path_to_generated_data = str(Path(args.dataset, 'train'))
-    args.evaluation_data = str(Path(args.dataset, 'test'))
     print(args.path_to_generated_data)
     print(os.listdir(args.path_to_generated_data))
 
-    train_args = vars(args)
-
-    local = not hasattr(run, "experiment")
-
-    if local:
-        from packages.azureml_functions import get_ws
-        ws = get_ws()
-    else:
-        ws = run.experiment.workspace
-
-    train_args['ws'] = ws
-
     # start to generate queries, hard-negatives and pseudolabels
-    train(**train_args)
+    train(**vars(args))
 
     # upload results to datastore, split data in train and testset
     # upload_train_test_split(train_fraction=0.9, filename=filename, path_to_data=args.path_to_generated_data)

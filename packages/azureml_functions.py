@@ -61,13 +61,10 @@ def get_sp_auth():
 
 def get_ws(stage="dev") -> Workspace:
     """Function that returns a workspace for the given stage.
-
     Args:
         stage (str, optional): One of the deployment staged. Either dev/uat/prod. Defaults to "dev".
-
     Raises:
         ValueError: In case an invalid stage name is passed.
-
     Returns:
         Workspace: _description_
     """

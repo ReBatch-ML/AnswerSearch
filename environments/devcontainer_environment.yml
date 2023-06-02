@@ -12,8 +12,20 @@ dependencies:
   - pip:
     - azureml-defaults
     - azureml-pipeline-steps
+    - streamlit
+    - azure-storage-blob
     - joblib
+    - sentence-transformers
+    - faiss-cpu
+    - datasets
     - azure-ai-ml
     - azure-identity
     - azure-keyvault-secrets
-    - sentence-transformers
+    #Milvus stuff
+    - pymilvus
+    #GCP stuf
+    - google-cloud-aiplatform
+    - google-cloud-storage
+    - kfp
+    - google-cloud-pipeline-components
+    

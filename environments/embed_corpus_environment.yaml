@@ -1,0 +1,21 @@
+name: create_embeddings
+channels:
+- defaults
+- esri
+- conda-forge
+dependencies:
+  - python=3.8
+  - pandas
+  - pip
+  - pip:
+    - azureml-defaults
+    # - azureml-pipeline-steps
+    - google-cloud-secret-manager
+    - joblib
+    - datasets
+    - sentence-transformers
+    - numpy>=1.18.5
+    - PyYAML>=5.3.1
+    - torch>=1.7.0
+    - torchvision>=0.8.1
+    - faiss-gpu

@@ -1,0 +1,5 @@
+models:
+  - name:   "untrained_bi_encoder"
+    version: "1"
+  - name:   "untrained_cross_encoder"
+    version: "1"

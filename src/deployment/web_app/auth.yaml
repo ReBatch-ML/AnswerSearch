@@ -1,22 +1,54 @@
 cookie:
-  expiry_days: 30
+  expiry_days: 5
   key: some_signature_key
   name: some_cookie_name
 credentials:
   usernames:
-    demo:
-      email: demo.be
-      name: demo
-      password: $2b$12$ugWl7okmkNArG02qvL7gY.Mm7S0Kwu3iIQtbPMtt8Qs7QMTdZt01q
+    guntherstuer:
+      email: Gunther.STUER@consilium.europa.eu
+      name: GuntherSTUER
+      password: $2b$12$8Y.KrHJ8AJiumI0hguc50.o0DehiceG5WCBjxdya0R37MxgOi1qk.
     jorgedecorte:
       email: Jorge.decorte@rebatch.be
-      name: Jorge Decorte
+      name: Jorge
       password: $2b$12$h45CAt7U8HcY7XEcJWucCutg3yAhW2cbkfzaNyZJfLLQFwHOJH3v2
-    rubendebien:
+    jorgedecorteeu:
+      email: jorge.decorte@consilium.europa.eu
+      name: Jorge
+      password: $2b$12$bZSxYDvTnDroq7eDYhiPTOwfHmhouhZHuEr5HAjiLSS5N2bCnTuuG
+    ju:
+      email: ju@rebatch.be
+      name: ju
+      password: $2b$12$IdCyIy4hSkz/aQyU230hWu7DwdwU3U0MWa0I854xwHaRhZdoUbDPG
+    lucsix:
+      email: Luc.SIX@consilium.europa.eu
+      name: LucSIX
+      password: $2b$12$o.DsQSCJcmasjthUEcp3xuc2/wahATJ6gs5zJVENdJBogN2kAs1im
+    luytsan:
+      email: andreas.luyts@rebatch.be
+      name: andreas luyts
+      password: $2b$12$xIYRkolOzsw/DqzEg5l29OuqBQDl1gK2EZuXXXoXVElJkty2VeyAu
+    rdebien:
       email: ruben.debien@rebatch.be
       name: Ruben Debien
       password: $2b$12$d5LBc5sIEXQLL3nCDNguSulWV108swogbYVcuHXFXaT7xSBEcvDgm
+    rdebieneu:
+      email: ruben.debien@consilium.europa.eu
+      name: Ruben Debien EU
+      password: $2b$12$d5LBc5sIEXQLL3nCDNguSulWV108swogbYVcuHXFXaT7xSBEcvDgm
+    semsearcheval:
+      email: info@consilium.europa.eu
+      name: SemSearchEval
+      password: $2b$12$BZQemjSaimpZ7tXq0jSsZ.WYKbev.s4MXQ1d9Snc0fgi/wZu784ha
+    stijndreezen:
+      email: StijnDREEZEN@consilium.europa.eu
+      name: Stijn
+      password: $2b$12$g7/iZgVozxiUVYMagsfRoOqTGPlc9rJOpFEwovyoU05idQMZfYHhe
+    vandeju:
+      email: julien.vandenavenne@rebatch.be
+      name: julien
+      password: $2b$12$Hd9L/UyDLfELGbpEVFLCGu/NGJT9i/ukXUHff2xC2stD6VeBfubL.
 preauthorized:
   emails:
-  - jorge.decorte@rebatch.be
-  - ruben.debien@rebatch.be
+  - '*@rebatch.be'
+  - '*@consilium.europa.eu'

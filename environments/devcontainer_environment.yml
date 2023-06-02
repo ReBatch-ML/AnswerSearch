@@ -21,9 +21,11 @@ dependencies:
     - azure-ai-ml
     - azure-identity
     - azure-keyvault-secrets
+    #Milvus stuff
+    - pymilvus
     #GCP stuf
     - google-cloud-aiplatform
     - google-cloud-storage
     - kfp
     - google-cloud-pipeline-components
-    - pymilvus
+    

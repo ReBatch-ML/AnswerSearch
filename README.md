@@ -68,6 +68,7 @@ The file packages/milvus_functions.py contains fucntions to:
 4. Insert data from corpus
 5. perform search on vectors
 6. calculate recall using test file for GSC corpus
+7. drop collection
 
 Uncomment the wanted functions in the main and run the script.
 

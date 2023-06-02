@@ -240,14 +240,14 @@ if __name__ == '__main__':
     #utility.drop_collection("milvus_test")
     #create_collection()
     #change_index()
-    load_vectors()
+    #load_vectors()
     collection = Collection("milvus_vectors")      # Get an existing collection.
-    #collection.release()
+    
     print(collection.num_entities)
     #collection.load()
     #print("collection loaded")
-    #compute_recall()
-    #get_all_vectors()
+    #collection.release()
+
 
 
     connections.disconnect("default")

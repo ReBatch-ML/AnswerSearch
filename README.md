@@ -3,29 +3,73 @@
 
 ## Deploy backend
 ### online managed deployments:
-Run script:
-'''
+Run script in source directory:
+```
 python pipelines/deployment/deploy_all_backend.py start
-'''
+```
 
 This will start the Milvus kubernetes service, check if the milvus server is online and then deploy the semsearch, flan and dolly backend modules.
+### frontend UI:
+To launch the webapp, run script in source directory:
+```
+./pipelines/deployment/deploy_webapp.sh
+```
+If you want to run the app locally, first go to the backend endpoints in azure ML studio of the AnswerSearch resourcegroup. If the deployment was successful you can find the api url and keys under "Consume". Copy the urls and keys for all 3 backend deployments and put them in a json file as specified in pipelines/deployment/deploy_localapp.sh.
+Once this is done run script in source directory:
+```
+./pipelines/deployment/deploy_localapp.sh
+```
 
 ## Turn off deployments to safe money
 
 ### online managed deployments:
-Run script:
-'''
+Run scriptin source directory:
+```
 python pipelines/deployment/deploy_all_backend.py stop
-'''
+```
 
 This will stop the milvus kubernetes service and delete the semsearch, flan and dolly backend endpoints.
 
 ### frontend UI:
-1. Go to the resource group where the website resources reside:
+1. Go to the AnswerSearch resource group where the website resources reside:
     1. App Service
     2. App Service plan
 2. Delete both resources
 
+## Check on Milvus Kubernetes service
+### In Azure Portal (installation)
+Acces Kubernetes service in Azure Portal:
+1. Go to the AnswerSearch resource group where the Kubernetes resources reside
+2. Go to "Milvus-kube"
+3. Click on "Connect"
+4. Click on "Open Cloud Shell"
+To view external ip of the Milvus service to connect to, run:
+```
+Kubectl get services
+```
+To view status of the milvus services; all 3 need to be running (1/1) in order for Milvus to work, run:
+```
+Kubectl get pods
+```
+In order to install Milvus again type:
+```
+helm install my-release milvus/milvus --set service.type=LoadBalancer --set cluster.enabled=false --set etcd.replicaCount=1 --set minio.mode=standalone --set pulsar.enabled=false
+```
+To uninstall Milvus type:
+```
+helm uninstall my-release
+```
+(unistalling Milvus will delete all collections)
+### With Python SDK (Managing Collections)
+The file packages/milvus_functions.py contains fucntions to:
+1. Connect to Milvus
+2. Create collection
+3. Change index
+4. Insert data from corpus
+5. perform search on vectors
+6. calculate recall using test file for GSC corpus
+
+Uncomment the wanted functions in the main and run the script.
 
 ## Directory Structure
 

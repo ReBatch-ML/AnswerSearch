@@ -43,7 +43,7 @@ def create_deployment(ml_client, endpoint_name, env_vars=None):
     return deployment
 
 
-def main():
+def deploy():
     """
     Main function for the deployment script.
     """
@@ -73,5 +73,12 @@ def main():
     secret_client.set_secret(name="semsearch-key", value=endpoint_key)
 
 
+def delete():
+    """Delete the endpoint and deployment for the semsearch backend"""
+    ml_client = get_ml_client(stage="dev")
+    endpoint_name = f"semantic-search-endpoint"
+    ml_client.online_endpoints.begin_delete(name=endpoint_name)
+
 if __name__ == "__main__":
-    main()
+    deploy()
+    #delete()

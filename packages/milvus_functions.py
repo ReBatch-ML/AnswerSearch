@@ -1,3 +1,5 @@
+"""help functions for milvus database
+"""
 import numpy as np
 import struct
 from pymilvus import CollectionSchema, FieldSchema, DataType, Collection, Milvus
@@ -17,6 +19,11 @@ from sentence_transformers import SentenceTransformer
 
 
 def create_collection():
+    """create milvus collection
+
+    Returns:
+        _type_: collection
+    """
     vector_id = FieldSchema(name="id", dtype=DataType.INT64, descrition="primary field", is_primary=True, auto_id=False)
     vector = FieldSchema(
     name="vector",
@@ -72,6 +79,7 @@ def create_collection():
     return collection
 
 def connect_to_db():
+    """connect to milvus database"""
     connections.connect(
     alias="default",
     user='username',
@@ -82,11 +90,17 @@ def connect_to_db():
 
 
 def get_start_index():
+    """get the start index of the vectors to be inserted
+
+    Returns:
+        _type_: number of vectors in collection
+    """
     collection = Collection("milvus_vectors") 
     print("number of vectors in collection so far: ", collection.num_entities)
     return collection.num_entities
 
 def load_vectors():
+    """load vectors from disk"""
     last = False
     corpus_embeddings = load_from_disk("pub")
     while(not last):
@@ -108,6 +122,7 @@ def load_vectors():
             time.sleep(10)
 
 def change_index():
+    """change index of collection"""
     collection = Collection("milvus_vectors")      # Get an existing collection.
     collection.load()
     collection.release()
@@ -123,7 +138,16 @@ def change_index():
 
         
 def search(target, collection):
-    
+    """search for a vector in milvus collection
+
+    Args:
+        target (_type_): target vector
+        collection (_type_): collection to search in
+
+    Returns:
+        _type_: _results and time taken to search
+    """
+   
     search_params = {"metric_type": "IP", "params": {"nprobe":512}, "offset": 0}
     start = time.time()
     results = collection.search(
@@ -144,6 +168,12 @@ def search(target, collection):
     #collection.release()
 
 def select_from_corpus(start, corpus_embeddings):
+
+    """select vectors from corpus to be inserted
+
+    Returns:
+        _type_: whether it is the last batch of vectors, and the vectors to be inserted
+    """
     
     end = np.shape(corpus_embeddings)[0]
     last = False
@@ -160,6 +190,7 @@ def select_from_corpus(start, corpus_embeddings):
     return last, [full_vec["idx"], full_vec["embeddings"], full_vec["text"], full_vec["chunk_id"], full_vec["_id"],full_vec["doc_id"], full_vec["title"],years]
 
 def calculate_recall():
+    """calculate recall and average position of the search results"""
     bi_encoder = SentenceTransformer('bi_encoder')
     collection = Collection("milvus_vectors")      # Get an existing collection.
     collection.load()
@@ -183,6 +214,12 @@ def calculate_recall():
     collection.release()
 
 def query_text(bi_encoder, query, target, collection):
+
+    """search for a text in milvus collection
+
+    Returns:
+        _type_: position of the target vector in the search results and time taken to search
+    """
 
     query_embedding = bi_encoder.encode(query, convert_to_tensor=False, convert_to_numpy=True)
     

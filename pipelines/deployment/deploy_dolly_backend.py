@@ -42,7 +42,7 @@ def create_deployment(ml_client, endpoint_name):
     return deployment
 
 
-def main():
+def deploy():
     """Create endpoint and deployment for the backend; store url and key in keyvault
     """
     parser = argparse.ArgumentParser()
@@ -76,5 +76,12 @@ def main():
     secret_client.set_secret(name="dolly-key", value=endpoint_key)
 
 
+def delete():
+    """Delete the endpoint and deployment for the dolly backend"""
+    ml_client = get_ml_client(stage="dev")
+    endpoint_name = "dolly-endpoint"
+    ml_client.online_endpoints.begin_delete(name=endpoint_name)
+
 if __name__ == "__main__":
-    main()
+    deploy()
+    #delete()

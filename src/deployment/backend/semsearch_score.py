@@ -64,6 +64,7 @@ class Context():
         return self.text if not self.duplicate else "DUPLICATE"
     
 def connect_to_db():
+    """Connect to Milvus server"""
     connections.connect(
     alias="default",
     user='username',
@@ -234,6 +235,14 @@ def __connect_overlapping_chunks(context_dict: Dict, semsearch_paragraph_index: 
         return c
 
 def expand_context_milvus(og_samples):
+    """expand contexts of samples using milvus
+
+    Args:
+        og_samples (_type_): original samples list
+
+    Returns:
+        _type_: new samples list with expanded contexts
+    """
     samples = og_samples.copy()
     context = []
     k = len(samples["idx"])
@@ -291,65 +300,6 @@ def expand_context_milvus(og_samples):
     samples["context"] = [str(c) for c in context]
     return samples
 
-
-def expand_context(ds, og_samples):
-    """
-    Function that expands paragraphs to a context. It will look for all paragraphs that have the same chunk_id and pass all these paragraphs to the
-    __connect_overlapping_chunks function.
-
-    Args:
-        ds (Dataset): Huggingface Dataset that has all the paragraphs. It should have a column called "chunk_id" that indicates which chunk a paragraph belongs to. 
-        og_samples (Dict): Result returned by the semantic search
-        
-    Returns:
-        Dict: Updates samples dict with a new column called "context" that contains the expanded context
-    """
-    samples = og_samples.copy()
-    context = []
-    for i in range(len(samples["idx"])):
-        if samples["chunk_id"][i] != -1:
-            chunk_id = samples["chunk_id"][i]
-
-            look_ahead_idx = samples["idx"][i] + 1
-            while ds[look_ahead_idx]["chunk_id"] == chunk_id:
-                look_ahead_idx += 1
-
-            context_dict = {
-                "texts": [ds[j]['text'] for j in range(chunk_id, look_ahead_idx)],
-                "idxs": [ds[j]['idx'] for j in range(chunk_id, look_ahead_idx)],
-                "paragraph_idx": samples["idx"][i],
-            }
-
-            assert context_dict["paragraph_idx"] == context_dict["idxs"][samples["idx"][i] - chunk_id]
-
-            ctx = __connect_overlapping_chunks(context_dict, samples["idx"][i] - chunk_id)
-
-            context.append(ctx)
-
-        else:
-            c = Context(paragraph_idx=samples["idx"][i], idxs_before=None, idxs_after=None, text=samples["text"][i])
-            context.append(c)
-
-    samples["context"] = context
-
-    # find all samples that have expended contexts
-    chunked_sample_idxs = [i for i, c_id in enumerate(samples["chunk_id"]) if c_id != -1]
-    print("Chunked samples: ", chunked_sample_idxs)
-    # first one can't be a duplicate
-    for num, i in enumerate(chunked_sample_idxs[1:], 1):
-        chunk_id = samples["chunk_id"][i]
-        # compare to all previous samples
-        for j in chunked_sample_idxs[:num]:
-            ci = samples["context"][i]
-            cj = samples["context"][j]
-
-            if ci == cj:
-                print(f"{i} is a duplicate of {j}")
-                ci.duplicate = True
-                break
-
-    samples["context"] = [str(c) for c in samples["context"]]
-    return samples
 
 
 def split_in_sentences(text):
@@ -454,39 +404,6 @@ def score_sentences(query_encoded, dictionary):
     dictionary.update(d)
 
 
-def filter_retrieved_ex(retrieved_examples, years, keep=32):
-    """
-    Filter the results based on publishing year. If there's not enough documents over to keep, then take unfiltered samples too.
-
-    Args:
-        retrieved_examples (Dict): Retrieved items from the faiss index
-        years (List[int]): List of the acceptible years.
-        keep (int, optional): Amount of results to show or pad to when the filter is too strict. Defaults to 32.
-
-    Returns:
-        Tuple(Dict, Dict): Tuple of result dict with only filtered items and of padding items that are outside the filter (if needed)
-    """
-    retex_df = pd.DataFrame(retrieved_examples)
-    retex_df['year'] = retex_df['doc_id'].apply(lambda x: int(x.split(' ')[2]))
-
-    filtered_df = retex_df[retex_df.year.isin(years)].copy()
-
-    filtered_df.drop(columns=['year'], inplace=True)
-    filtered_df = filtered_df[:keep]
-    num_extra_results = abs(len(filtered_df) - keep)
-    print(f"Number of filtered results {len(filtered_df)}")
-    print(f"Extra results to add from other years is {num_extra_results}")
-    if num_extra_results > 0:
-        print(f'Warning: lacking {num_extra_results} results after filtering')
-        others_df = retex_df[~retex_df.year.isin(years)]
-        others_df = others_df[:num_extra_results]
-        others_dict = others_df.to_dict(orient='list')
-    else:
-        others_dict = None
-    result_dict = filtered_df.to_dict(orient='list')
-
-    return result_dict, others_dict
-
 
 def cross_encoder_reranking(query, samples, prefix=""):
     """
@@ -535,6 +452,16 @@ def cross_encoder_reranking(query, samples, prefix=""):
     return res_dict
 
 def search(target, collection, top_k=128):
+    """similarity search for a target in a milvus collection
+
+    Args:
+        target (_type_): target vector
+        collection (_type_): milvus collection
+        top_k (int, optional): number of results to search for. Defaults to 128.
+
+    Returns:
+        _type_: results of the search
+    """
     
     search_params = {"metric_type": "IP", "params": {"ef":512}, "offset": 0}
     results = collection.search(
@@ -568,6 +495,18 @@ def search(target, collection, top_k=128):
     return samples
 
 def filtered_search(target, collection, years, top_k=128):
+    """similarity search for a target in a milvus collection with prefiltering on years
+
+    Args:
+        target (_type_): target vector
+        collection (_type_): milvus collection
+        years (_type_): list of searchable years
+        top_k (int, optional): number of results to search for. Defaults to 128.
+
+
+    Returns:
+        _type_: results of the search
+    """
     
     expr="year in ["
     for i in range(len(years)):

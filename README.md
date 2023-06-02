@@ -51,7 +51,7 @@ To view status of the milvus services, run:
 ```
 Kubectl get pods
 ```
-all 3 need to be running (1/1) in order for Milvus to work.
+All 3 need to be running (1/1) in order for Milvus to work.
 
 In order to install Milvus run:
 ```
@@ -71,8 +71,6 @@ The file packages/milvus_functions.py contains fucntions to:
 5. perform search on vectors
 6. calculate recall using test file for GSC corpus
 7. drop collection
-
-Uncomment the wanted functions in the main and run the script.
 
 ## Directory Structure
 

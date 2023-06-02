@@ -155,7 +155,7 @@ def demo():
             temperature = 0.01
 
     with center:
-        st.title("ReBatch AnswerSearch")
+        st.title("Rebatch Knowledge Assistant")
         # st.header("")
         if IS_ADMIN_USER:
             with st.form(key="text_form"):

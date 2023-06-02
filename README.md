@@ -3,21 +3,21 @@
 
 ## Deploy backend
 ### Online managed deployments:
-Run script in source directory:
+Run the following python script in source directory:
 ```
 python pipelines/deployment/deploy_all_backend.py start
 ```
 
 This will start the Milvus kubernetes service, check if the milvus server is online and then deploy the semsearch, flan and dolly backend modules.
 ### Frontend UI:
-To launch the webapp, run script in source directory:
+To launch the webapp, run the following script in source directory:
 ```
 ./pipelines/deployment/deploy_webapp.sh
 ```
 Go to https://answersearch.azurewebsites.net to acces the site. Login with a @rebatch.be account for access to admin features.
 
 If you want to run the app locally, first go to the backend endpoints in azure ML studio of the AnswerSearch resourcegroup. If the deployment was successful you can find the api url and keys under "Consume". Copy the urls and keys for all 3 backend deployments and put them in a json file as specified in pipelines/deployment/deploy_localapp.sh.
-Once this is done run script in source directory:
+Once this is done run the following script in source directory:
 ```
 ./pipelines/deployment/deploy_localapp.sh
 ```
@@ -25,7 +25,7 @@ Once this is done run script in source directory:
 ## Turn off deployments to safe money
 
 ### Online managed deployments:
-Run scriptin source directory:
+Run the following python script in source directory:
 ```
 python pipelines/deployment/deploy_all_backend.py stop
 ```

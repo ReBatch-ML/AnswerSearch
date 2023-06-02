@@ -47,10 +47,12 @@ To view external ip of the Milvus service to connect to, run:
 ```
 Kubectl get services
 ```
-To view status of the milvus services; all 3 need to be running (1/1) in order for Milvus to work, run:
+To view status of the milvus services, run:
 ```
 Kubectl get pods
 ```
+all 3 need to be running (1/1) in order for Milvus to work.
+
 In order to install Milvus run:
 ```
 helm install my-release milvus/milvus --set service.type=LoadBalancer --set cluster.enabled=false --set etcd.replicaCount=1 --set minio.mode=standalone --set pulsar.enabled=false

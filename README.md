@@ -14,7 +14,7 @@ To launch the webapp, run script in source directory:
 ```
 ./pipelines/deployment/deploy_webapp.sh
 ```
-Go to answersearch.azurewebsites.net to acces the site. Login with a @rebatch.be account for access to admin features.
+Go to [answersearch.azurewebsites.net] to acces the site. Login with a @rebatch.be account for access to admin features.
 
 If you want to run the app locally, first go to the backend endpoints in azure ML studio of the AnswerSearch resourcegroup. If the deployment was successful you can find the api url and keys under "Consume". Copy the urls and keys for all 3 backend deployments and put them in a json file as specified in pipelines/deployment/deploy_localapp.sh.
 Once this is done run script in source directory:
